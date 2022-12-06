@@ -1,4 +1,4 @@
-# R codes for trivariate joint modeling for clustered data with longitudinal counts and recurrent events
+# R codes for trivariate joint modeling for clustered data with longitudinal counts and recurrent events with application to Lynch Syndrome families from Newfoundland
 
 Simulation study.R: This R script includes the generation and estimation codes for simulation studies of the trivariate joint model from the section 4: Simulation Studies of the same article.
 
