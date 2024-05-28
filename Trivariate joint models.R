@@ -4,7 +4,7 @@ inla.setOption(inla.mode="experimental")
 inla.setOption(num.threads=1) 
 
 # import the data
-data<-read.table("~/Desktop/NFdat_newer.txt", stringsAsFactors=FALSE)
+data<-read.table("~/Desktop/NFdat_newerdate.txt", stringsAsFactors=FALSE)
 
 # preparation for longitudinal outcomes
 # remove the observations with num >= 99
@@ -63,21 +63,16 @@ linear.covariate <- data.frame(mu = as.factor(c(rep(NA,n4+n5),rep(1,n1),rep(2,n2
                                l.Age = c(data.long$age00_trans, rep(0,n5+n1+n2)), 
                                l.Pcrc1age = c(data.long$pcrc1age_trans, rep(0,n5+n1+n2)), 
                                l.Cumgap = c(data.long$cumgap, rep(0,n5+n1+n2)), 
-                               l.Polyps = c(data.long$polyps00, rep(0,n5+n1+n2)), 
-                               l.Adenoma = c(data.long$adenoma00, rep(0,n5+n1+n2)), 
                                z.Time = c(rep(0,n4), log(data.long.z$gap), rep(0,n1+n2)), # related to log(mu): negative binomial component for longitudinal outcomes
                                intercept.z = c(rep(0,n4), rep(1,n5), rep(0,n1+n2)),                               
                                z.Sex = c(rep(0,n4), data.long.z$sex01, rep(0,n1+n2)),
                                z.Age = c(rep(0,n4), data.long.z$age00_trans, rep(0,n1+n2)),
                                z.Pcrc1age = c(rep(0,n4), data.long.z$pcrc1age_trans, rep(0,n1+n2)),
                                z.Cumgap = c(rep(0,n4), data.long.z$cumgap, rep(0,n1+n2)),
-                               z.Polyps = c(rep(0,n4), data.long.z$polyps00, rep(0,n1+n2)),
-                               z.Adenoma = c(rep(0,n4), data.long.z$adenoma00, rep(0,n1+n2)),
                                r.Sex = c(rep(0,n4+n5), data$sex01, rep(0,n2)), # relative to hazard function for recurrent events
                                r.Adenoma = c(rep(0,n4+n5), data$adenoma0, rep(0,n2)),
                                r.Age = c(rep(0,n4+n5), data$age0_trans, rep(0,n2)),
                                r.Pcrc1age = c(rep(0,n4+n5), data$pcrc1age_trans, rep(0,n2)),
-                               intercept.d = c(rep(0,n4+n5+n1), rep(1,n2)),
                                d.Sex = c(rep(0,n4+n5+n1), data.term$sex01), # related to hazard function for terminal event
                                d.Adenoma = c(rep(0,n4+n5+n1), data.term$adenoma00),
                                d.Age = c(rep(0,n4+n5+n1), data.term$age00_trans),
@@ -102,12 +97,12 @@ formula1 = Y ~ -1 + mu + intercept.l + l.Sex + l.Age + l.Pcrc1age + l.Cumgap + o
   intercept.z + z.Sex + z.Age + z.Pcrc1age + z.Cumgap + offset(z.Time) +
   r.Sex + r.Adenoma + r.Age + r.Pcrc1age +
   d.Sex + d.Adenoma + d.Age + d.Pcrc1age +
-  f(d.YR, model="iidkd", order=2, n=2*n2, hyper = list(theta1 = list(param = c(10, 1, 1, 0)))) +
+  f(d.YR, model="iidkd", order=2, n=2*n2, hyper = list(theta1 = list(param = c(5, 1, 1, 0)))) +
   f(d.YL, copy="d.YR") +
   f(r.YR, copy="d.YR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
   f(l.YL, copy="d.YR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
   f(z.YL, copy="d.YR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
-  f(r.ZR, model="iidkd", order=2, n=2*n3, hyper = list(theta1 = list(param = c(10, 1, 1, 0)))) +
+  f(r.ZR, model="iidkd", order=2, n=2*n3, hyper = list(theta1 = list(param = c(5, 1, 1, 0)))) +
   f(d.ZL, copy="r.ZR") +
   f(l.ZL, copy="r.ZR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
   f(z.ZL, copy="r.ZR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
@@ -116,46 +111,34 @@ formula1 = Y ~ -1 + mu + intercept.l + l.Sex + l.Age + l.Pcrc1age + l.Cumgap + o
 inla.model1 <- inla(formula1, family = c("binomial","zeroinflatednbinomial0","weibullsurv","weibullsurv"),
                     data = data.f, control.compute=list(dic=TRUE,cpo=TRUE,waic=TRUE),
                     control.family = list(list(),list(hyper = list(prob = list(initial = -10,fixed = TRUE))),list(variant=1),list(variant=1)),
-                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE)
+                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE,control.fixed = list(prec.intercept = 0.1))
 
 ### Final Results
 summary(inla.model1)
-#Call:
-c("inla.core(formula = formula, family = family, contrasts = contrasts, ", " data = data, quantiles = 
-   quantiles, E = E, offset = offset, ", " scale = scale, weights = weights, Ntrials = Ntrials, strata = 
-   strata, ", " lp.scale = lp.scale, link.covariates = link.covariates, verbose = verbose, ", " lincomb = 
-   lincomb, selection = selection, control.compute = control.compute, ", " control.predictor = 
-   control.predictor, control.family = control.family, ", " control.inla = control.inla, control.fixed = 
-   control.fixed, ", " control.mode = control.mode, control.expert = control.expert, ", " control.hazard = 
-   control.hazard, control.lincomb = control.lincomb, ", " control.update = control.update, 
-   control.lp.scale = control.lp.scale, ", " control.pardiso = control.pardiso, only.hyperparam = 
-   only.hyperparam, ", " inla.call = inla.call, inla.arg = inla.arg, num.threads = num.threads, ", " 
-   blas.num.threads = blas.num.threads, keep = keep, working.directory = working.directory, ", " silent = 
-   silent, inla.mode = inla.mode, safe = FALSE, debug = debug, ", " .parent.frame = .parent.frame)") 
-Time used:
-  Pre = 4.93, Running = 7.27, Post = 0.0597, Total = 12.3 
+#Time used:
+Pre = 2.26, Running = 8.69, Post = 0.0909, Total = 11 
 Fixed effects:
-  mean    sd 0.025quant 0.5quant 0.975quant mode kld
-mu1          1.420 0.133      1.159    1.420      1.681   NA   0
-mu2         -2.713 0.524     -3.740   -2.713     -1.685   NA   0
-intercept.l  1.457 0.400      0.673    1.457      2.240   NA   0
-l.Sex       -0.134 0.394     -0.907   -0.134      0.639   NA   0
-l.Age       -0.138 0.174     -0.480   -0.138      0.203   NA   0
-l.Pcrc1age   0.002 0.559     -1.093    0.002      1.097   NA   0
-l.Cumgap    -0.136 0.042     -0.218   -0.136     -0.054   NA   0
-intercept.z -1.541 0.567     -2.653   -1.541     -0.429   NA   0
-z.Sex        1.100 0.525      0.070    1.100      2.129   NA   0
-z.Age        0.452 0.244     -0.026    0.452      0.930   NA   0
-z.Pcrc1age  -0.755 0.605     -1.941   -0.755      0.431   NA   0
-z.Cumgap    -0.243 0.079     -0.398   -0.243     -0.089   NA   0
-r.Sex        0.187 0.142     -0.092    0.187      0.466   NA   0
-r.Adenoma    0.150 0.155     -0.154    0.150      0.455   NA   0
-r.Age        0.010 0.059     -0.106    0.010      0.126   NA   0
-r.Pcrc1age  -0.273 0.232     -0.728   -0.273      0.182   NA   0
-d.Sex        2.799 0.629      1.567    2.799      4.031   NA   0
-d.Adenoma   -1.472 0.808     -3.055   -1.472      0.111   NA   0
-d.Age        1.192 0.255      0.691    1.192      1.692   NA   0
-d.Pcrc1age  -0.554 0.716     -1.958   -0.554      0.849   NA   0
+  mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+mu1          1.460 0.152      1.163    1.460      1.757  1.460   0
+mu2         -3.344 0.585     -4.491   -3.344     -2.198 -3.344   0
+intercept.l  1.621 0.413      0.812    1.621      2.430  1.621   0
+l.Sex       -0.319 0.408     -1.118   -0.319      0.480 -0.319   0
+l.Age       -0.131 0.177     -0.477   -0.131      0.215 -0.131   0
+l.Pcrc1age   0.022 0.590     -1.134    0.022      1.178  0.022   0
+l.Cumgap    -0.154 0.042     -0.236   -0.154     -0.072 -0.154   0
+intercept.z -1.932 0.604     -3.115   -1.932     -0.749 -1.932   0
+z.Sex        1.588 0.537      0.536    1.588      2.640  1.588   0
+z.Age        0.628 0.246      0.147    0.628      1.110  0.628   0
+z.Pcrc1age  -1.075 0.686     -2.419   -1.075      0.269 -1.075   0
+z.Cumgap    -0.200 0.077     -0.351   -0.200     -0.049 -0.200   0
+r.Sex        0.274 0.149     -0.018    0.274      0.566  0.274   0
+r.Adenoma    0.075 0.153     -0.226    0.075      0.375  0.075   0
+r.Age        0.008 0.061     -0.112    0.008      0.128  0.008   0
+r.Pcrc1age  -0.296 0.264     -0.815   -0.296      0.222 -0.296   0
+d.Sex        3.470 0.737      2.026    3.470      4.914  3.470   0
+d.Adenoma   -3.008 0.862     -4.699   -3.008     -1.318 -3.008   0
+d.Age        1.376 0.317      0.755    1.376      1.997  1.376   0
+d.Pcrc1age  -1.090 0.888     -2.831   -1.090      0.650 -1.090   0
 
 Random effects:
   Name	  Model
@@ -171,31 +154,31 @@ z.ZL Copy
 d.ZR Copy
 
 Model hyperparameters:
-  mean     sd 0.025quant 0.5quant 0.975quant mode
-size for nbinomial zero-inflated observations[2] 14.017 10.041      3.161   11.396     40.992   NA
-alpha parameter for weibullsurv[3]                1.167  0.057      1.059    1.165      1.282   NA
-alpha parameter for weibullsurv[4]                0.535  0.051      0.445    0.531      0.647   NA
-Theta1 for d.YR                                   0.973  0.245      0.486    0.974      1.454   NA
-Theta2 for d.YR                                   0.268  0.299     -0.338    0.271      0.853   NA
-Theta3 for d.YR                                  -1.432  0.563     -2.566   -1.424     -0.342   NA
-Theta1 for r.ZR                                   1.108  0.157      0.789    1.110      1.415   NA
-Theta2 for r.ZR                                   0.787  0.236      0.318    0.789      1.249   NA
-Theta3 for r.ZR                                  -1.048  0.523     -2.074   -1.052     -0.003   NA
-Beta for r.YR                                     0.750  0.242      0.261    0.753      1.223   NA
-Beta for l.YL                                    -1.051  0.403     -1.834   -1.055     -0.243   NA
-Beta for z.YL                                     1.283  0.412      0.447    1.287      2.087   NA
-Beta for l.ZL                                     1.699  0.450      0.813    1.698      2.588   NA
-Beta for z.ZL                                     1.086  0.411      0.287    1.081      1.913   NA
-Beta for d.ZR                                    -0.567  0.557     -1.651   -0.572      0.544   NA
+  mean     sd 0.025quant 0.5quant 0.975quant   mode
+size for nbinomial_0 zero-inflated observations[2]  8.625 10.577      1.032    5.487     35.843  2.533
+alpha parameter for weibullsurv[3]                  1.192  0.064      1.071    1.191      1.323  1.188
+alpha parameter for weibullsurv[4]                  0.699  0.070      0.580    0.693      0.855  0.674
+Theta1 for d.YR                                     0.543  0.406     -0.258    0.543      1.339  0.547
+Theta2 for d.YR                                    -0.547  0.334     -1.197   -0.549      0.118 -0.560
+Theta3 for d.YR                                    -1.267  0.487     -2.244   -1.261     -0.324 -1.237
+Theta1 for r.ZR                                     0.930  0.203      0.530    0.931      1.328  0.932
+Theta2 for r.ZR                                     0.384  0.306     -0.213    0.383      0.990  0.377
+Theta3 for r.ZR                                    -0.757  0.504     -1.767   -0.750      0.217 -0.724
+Beta for r.YR                                       0.376  0.160      0.058    0.377      0.689  0.380
+Beta for l.YL                                      -0.585  0.258     -1.098   -0.583     -0.083 -0.575
+Beta for z.YL                                       0.660  0.285      0.102    0.659      1.223  0.654
+Beta for l.ZL                                       1.222  0.450      0.351    1.217      2.122  1.196
+Beta for z.ZL                                       1.167  0.430      0.338    1.162      2.030  1.138
+Beta for d.ZR                                      -0.532  0.610     -1.758   -0.524      0.644 -0.490
 
-Deviance Information Criterion (DIC) ...............: 197.56
-Deviance Information Criterion (DIC, saturated) ....: -3888.58
-Effective number of parameters .....................: 102.44
+Deviance Information Criterion (DIC) ...............: 146.75
+Deviance Information Criterion (DIC, saturated) ....: NA
+Effective number of parameters .....................: 143.58
 
-Watanabe-Akaike information criterion (WAIC) ...: 229.53
-Effective number of parameters .................: 116.66
+Watanabe-Akaike information criterion (WAIC) ...: 222.50
+Effective number of parameters .................: 169.86
 
-Marginal log-Likelihood:  -224.43 
+Marginal log-Likelihood:  -220.04 
 CPO, PIT is computed 
 Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
@@ -207,22 +190,22 @@ names(inla.model1$marginals.fixed)
 [9] "z.Sex"       "z.Age"       "z.Pcrc1age"  "z.Cumgap"    "r.Sex"       "r.Adenoma"   "r.Age"       "r.Pcrc1age" 
 [17] "d.Sex"       "d.Adenoma"   "d.Age"       "d.Pcrc1age" 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model1$marginals.fixed[[1]]))
-#Mean            0.243877 
-Stdev           0.0323746 
-Quantile  0.025 0.186413 
-Quantile  0.25  0.220975 
-Quantile  0.5   0.2417 
-Quantile  0.75  0.26437 
-Quantile  0.975 0.313383 
+#Mean            0.234842 
+Stdev           0.0355696 
+Quantile  0.025 0.172654 
+Quantile  0.25  0.209585 
+Quantile  0.5   0.232132 
+Quantile  0.75  0.257103 
+Quantile  0.975 0.312094
 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model1$marginals.fixed[[2]]))
-#Mean            17.2554 
-Stdev           9.54614 
-Quantile  0.025 5.3949 
-Quantile  0.25  10.5645 
-Quantile  0.5   15.0486 
-Quantile  0.75  21.4324 
-Quantile  0.975 41.908 
+#Mean            33.5388 
+Stdev           20.9957 
+Quantile  0.025 9.00176 
+Quantile  0.25  19.0635 
+Quantile  0.5   28.2916 
+Quantile  0.75  41.9755 
+Quantile  0.975 88.6871 
 
 names(inla.model1$internal.marginals.hyperpar) 
 #[1] "log size for nbinomial zero-inflated observations[2]" "alpha_intern for weibullsurv[3]"                     
@@ -236,13 +219,13 @@ names(inla.model1$internal.marginals.hyperpar)
 
 # for dispersion
 inla.zmarginal(inla.tmarginal(function(x) exp(x),inla.model1$internal.marginals.hyperpar[[1]]))
-#Mean            13.9718 
-Stdev           9.77217 
-Quantile  0.025 3.21483 
-Quantile  0.25  7.36064 
-Quantile  0.5   11.3739 
-Quantile  0.75  17.5608 
-Quantile  0.975 39.9843 
+#Mean            8.53913 
+Stdev           9.8268 
+Quantile  0.025 1.01191 
+Quantile  0.25  2.99007 
+Quantile  0.5   5.41267 
+Quantile  0.75  10.1667 
+Quantile  0.975 35.1169 
 
 # for standard deviation and correlation coefficients of random effects
 # for subject-specific random effects Y
@@ -252,29 +235,29 @@ sdcor.Y <- matrix(unlist(mcsamples), nrow = 2^2)
 sdcor.Y.mean <- matrix(rowMeans(sdcor.Y),2,2)
 round(sdcor.Y.mean,3)
 #[,1]   [,2]
-[1,] 0.621 0.676
-[2,] 0.676 0.824
+[1,] 1.458 0.875
+[2,] 0.875 1.804
 
 # sd
 sdcor.Y.sd <- matrix(apply(sdcor.Y, 1, sd),2,2)
 round(sdcor.Y.sd,3)
 #[,1]  [,2]
-[1,] 0.269 0.206
-[2,] 0.206 0.334
+[1,] 0.573 0.122
+[2,] 0.122 0.618
 
 # 2.5% lower CI
 sdcor.Y.lowerci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.025)),2,2)
 round(sdcor.Y.lowerci,3)
 #[,1]   [,2]
-[1,] 0.280 0.162
-[2,] 0.162 0.361
+[1,] 0.546 0.605
+[2,] 0.605 0.893
 
 # 97.5% upper CI
 sdcor.Y.upperci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.975)),2,2)
 round(sdcor.Y.upperci,3)
 #[,1]  [,2]
-[1,] 1.293 0.934
-[2,] 0.934 1.655
+[1,] 2.803 0.970
+[2,] 0.970 3.281
 
 # for family-specific random effects Z
 mcsamples <- inla.iidkd.sample(10^4, inla.model1, "r.ZR", return.cov=FALSE) 
@@ -283,72 +266,68 @@ sdcor.Z <- matrix(unlist(mcsamples), nrow = 2^2)
 sdcor.Z.mean <- matrix(rowMeans(sdcor.Z),2,2)
 round(sdcor.Z.mean,3)
 #[,1]  [,2]
-[1,] 0.387 0.395
-[2,] 0.395 0.468
+[1,] 0.461 0.390
+[2,] 0.390 0.713
 
 # sd
 sdcor.Z.sd <- matrix(apply(sdcor.Z, 1, sd),2,2)
 round(sdcor.Z.sd,3)
 #[,1]  [,2]
-[1,] 0.080 0.226
-[2,] 0.226 0.115
+[1,] 0.102 0.258
+[2,] 0.258 0.225
 
 # 2.5% lower CI
 sdcor.Z.lowerci <- matrix(apply(sdcor.Z,1,function(x) quantile(x,0.025)),2,2)
 round(sdcor.Z.lowerci,3)
 #[,1]   [,2]
-[1,]  0.260 -0.108
-[2,] -0.108  0.283
+[1,]  0.301 -0.198
+[2,] -0.198  0.367
 
 # 97.5% upper CI
 sdcor.Z.upperci <- matrix(apply(sdcor.Z,1,function(x) quantile(x,0.975)),2,2)
 round(sdcor.Z.upperci,3)
 #[,1]  [,2]
-[1,] 0.568 0.759
-[2,] 0.759 0.727
+[1,] 0.695 0.791
+[2,] 0.791 1.244
+
+inla.model1$dic$dic
+#[1]  146.7533
+inla.model1$dic$family.dic
+#[1]  341.12830  144.54031 -287.41019  -51.50509
 
 ################################################################################
 # zero-inflated Poisson distribution for longitudinal outcomes
 inla.model2 <- inla(formula1, family = c("binomial","zeroinflatedpoisson0","weibullsurv","weibullsurv"),
                     data = data.f, control.compute=list(dic=TRUE,cpo=TRUE,waic=TRUE),
                     control.family = list(list(),list(hyper = list(prob = list(initial = -10,fixed = TRUE))),list(variant=1),list(variant=1)),
-                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE)
+                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE,control.fixed = list(prec.intercept = 0.1))
 
 ### Final Results
 summary(inla.model2)
-#Call:
-c("inla.core(formula = formula, family = family, contrasts = contrasts, ", " data = data, quantiles = quantiles, E = E, offset = offset, ", " scale = 
-   scale, weights = weights, Ntrials = Ntrials, strata = strata, ", " lp.scale = lp.scale, link.covariates = link.covariates, verbose = verbose, ", " lincomb 
-   = lincomb, selection = selection, control.compute = control.compute, ", " control.predictor = control.predictor, control.family = control.family, ", " 
-   control.inla = control.inla, control.fixed = control.fixed, ", " control.mode = control.mode, control.expert = control.expert, ", " control.hazard = 
-   control.hazard, control.lincomb = control.lincomb, ", " control.update = control.update, control.lp.scale = control.lp.scale, ", " control.pardiso = 
-   control.pardiso, only.hyperparam = only.hyperparam, ", " inla.call = inla.call, inla.arg = inla.arg, num.threads = num.threads, ", " blas.num.threads = 
-   blas.num.threads, keep = keep, working.directory = working.directory, ", " silent = silent, inla.mode = inla.mode, safe = FALSE, debug = debug, ", " 
-   .parent.frame = .parent.frame)") 
-Time used:
-  Pre = 5.37, Running = 6.59, Post = 0.0656, Total = 12 
+#Time used:
+Pre = 2.25, Running = 7.97, Post = 0.122, Total = 10.3 
 Fixed effects:
-  mean    sd 0.025quant 0.5quant 0.975quant mode kld
-mu1          1.421 0.133      1.160    1.421      1.681   NA   0
-mu2         -2.686 0.530     -3.724   -2.686     -1.648   NA   0
-intercept.l  1.476 0.400      0.693    1.476      2.260   NA   0
-l.Sex       -0.146 0.396     -0.923   -0.146      0.631   NA   0
-l.Age       -0.140 0.175     -0.482   -0.140      0.203   NA   0
-l.Pcrc1age   0.005 0.559     -1.090    0.005      1.101   NA   0
-l.Cumgap    -0.138 0.042     -0.221   -0.138     -0.056   NA   0
-intercept.z -1.500 0.548     -2.575   -1.500     -0.425   NA   0
-z.Sex        1.102 0.510      0.103    1.102      2.101   NA   0
-z.Age        0.455 0.238     -0.012    0.455      0.921   NA   0
-z.Pcrc1age  -0.726 0.585     -1.874   -0.726      0.421   NA   0
-z.Cumgap    -0.251 0.077     -0.403   -0.251     -0.099   NA   0
-r.Sex        0.192 0.143     -0.087    0.192      0.472   NA   0
-r.Adenoma    0.142 0.155     -0.162    0.142      0.445   NA   0
-r.Age        0.010 0.059     -0.106    0.010      0.126   NA   0
-r.Pcrc1age  -0.276 0.232     -0.730   -0.276      0.179   NA   0
-d.Sex        2.798 0.633      1.557    2.798      4.039   NA   0
-d.Adenoma   -1.546 0.808     -3.130   -1.546      0.037   NA   0
-d.Age        1.189 0.258      0.684    1.189      1.694   NA   0
-d.Pcrc1age  -0.572 0.719     -1.980   -0.572      0.837   NA   0
+  mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+mu1          1.459 0.152      1.162    1.459      1.756  1.459   0
+mu2         -3.298 0.577     -4.429   -3.298     -2.166 -3.298   0
+intercept.l  1.614 0.414      0.802    1.614      2.425  1.614   0
+l.Sex       -0.320 0.408     -1.119   -0.320      0.479 -0.320   0
+l.Age       -0.131 0.177     -0.478   -0.131      0.215 -0.131   0
+l.Pcrc1age   0.019 0.593     -1.143    0.019      1.181  0.019   0
+l.Cumgap    -0.154 0.042     -0.236   -0.154     -0.072 -0.154   0
+intercept.z -1.778 0.559     -2.875   -1.778     -0.682 -1.778   0
+z.Sex        1.580 0.499      0.602    1.580      2.558  1.580   0
+z.Age        0.627 0.232      0.173    0.627      1.081  0.627   0
+z.Pcrc1age  -1.018 0.631     -2.255   -1.018      0.219 -1.018   0
+z.Cumgap    -0.222 0.074     -0.367   -0.222     -0.077 -0.222   0
+r.Sex        0.277 0.149     -0.016    0.277      0.570  0.277   0
+r.Adenoma    0.073 0.153     -0.228    0.073      0.374  0.073   0
+r.Age        0.008 0.061     -0.113    0.008      0.128  0.008   0
+r.Pcrc1age  -0.299 0.265     -0.817   -0.299      0.220 -0.299   0
+d.Sex        3.436 0.729      2.007    3.436      4.866  3.436   0
+d.Adenoma   -2.965 0.835     -4.602   -2.965     -1.328 -2.965   0
+d.Age        1.356 0.314      0.741    1.356      1.970  1.356   0
+d.Pcrc1age  -1.080 0.877     -2.800   -1.080      0.639 -1.080   0
 
 Random effects:
   Name	  Model
@@ -364,30 +343,30 @@ z.ZL Copy
 d.ZR Copy
 
 Model hyperparameters:
-  mean    sd 0.025quant 0.5quant 0.975quant mode
-alpha parameter for weibullsurv[3]  1.167 0.064      1.043    1.166      1.296   NA
-alpha parameter for weibullsurv[4]  0.529 0.035      0.460    0.529      0.599   NA
-Theta1 for d.YR                     0.949 0.268      0.415    0.951      1.472   NA
-Theta2 for d.YR                     0.267 0.347     -0.399    0.260      0.967   NA
-Theta3 for d.YR                    -1.401 0.552     -2.499   -1.397     -0.322   NA
-Theta1 for r.ZR                     1.110 0.185      0.740    1.112      1.469   NA
-Theta2 for r.ZR                     0.795 0.236      0.326    0.796      1.255   NA
-Theta3 for r.ZR                    -1.066 0.571     -2.205   -1.062      0.051   NA
-Beta for r.YR                       0.744 0.290      0.171    0.744      1.315   NA
-Beta for l.YL                      -1.079 0.480     -2.042   -1.073     -0.146   NA
-Beta for z.YL                       1.292 0.416      0.491    1.284      2.132   NA
-Beta for l.ZL                       1.743 0.501      0.779    1.734      2.754   NA
-Beta for z.ZL                       1.042 0.534     -0.011    1.042      2.094   NA
-Beta for d.ZR                      -0.609 0.527     -1.664   -0.602      0.413   NA
+  mean    sd 0.025quant 0.5quant 0.975quant   mode
+alpha parameter for weibullsurv[3]  1.194 0.065      1.071    1.192      1.328  1.188
+alpha parameter for weibullsurv[4]  0.703 0.045      0.622    0.701      0.797  0.695
+Theta1 for d.YR                     0.419 0.567     -0.727    0.430      1.505  0.474
+Theta2 for d.YR                    -0.514 0.354     -1.190   -0.520      0.201 -0.548
+Theta3 for d.YR                    -1.201 0.449     -2.097   -1.196     -0.329 -1.179
+Theta1 for r.ZR                     0.914 0.192      0.532    0.915      1.286  0.921
+Theta2 for r.ZR                     0.411 0.293     -0.162    0.410      0.990  0.405
+Theta3 for r.ZR                    -0.686 0.414     -1.498   -0.687      0.132 -0.690
+Beta for r.YR                       0.354 0.168      0.014    0.357      0.676  0.370
+Beta for l.YL                      -0.599 0.261     -1.123   -0.596     -0.096 -0.581
+Beta for z.YL                       0.686 0.307      0.095    0.682      1.302  0.664
+Beta for l.ZL                       1.258 0.421      0.437    1.255      2.097  1.242
+Beta for z.ZL                       1.076 0.435      0.219    1.076      1.932  1.077
+Beta for d.ZR                      -0.451 0.578     -1.605   -0.446      0.672 -0.424
 
-Deviance Information Criterion (DIC) ...............: 196.78
-Deviance Information Criterion (DIC, saturated) ....: -3530.38
-Effective number of parameters .....................: 105.67
+Deviance Information Criterion (DIC) ...............: 147.63
+Deviance Information Criterion (DIC, saturated) ....: 1226.57
+Effective number of parameters .....................: 146.89
 
-Watanabe-Akaike information criterion (WAIC) ...: 233.01
-Effective number of parameters .................: 122.29
+Watanabe-Akaike information criterion (WAIC) ...: 233.07
+Effective number of parameters .................: 178.07
 
-Marginal log-Likelihood:  -225.24 
+Marginal log-Likelihood:  -220.65 
 CPO, PIT is computed 
 Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
@@ -395,25 +374,25 @@ Posterior summaries for the linear predictor and the fitted values are computed
 # scale parameter in Weibull baseline hazard function for recurrent event and a terminal event
 # b_R = exp(-intercept_R) and b_D = exp(-intercept_D)
 names(inla.model2$marginals.fixed)
-#[1] "mu1"         "mu2"         "intercept.l" "l.Sex"       "l.Polyps"    "l.Age"       "l.Pcrc1age"  "intercept.z" "z.Sex"       "z.Polyps"    "z.Age"      
-[12] "z.Pcrc1age"  "r.Sex"       "r.Polyps"    "r.Age"       "r.Pcrc1age"  "d.Sex"       "d.Polyps"    "d.Age"       "d.Pcrc1age" 
+# [1] "mu1"         "mu2"         "intercept.l" "l.Sex"       "l.Age"       "l.Pcrc1age"  "l.Cumgap"    "intercept.z" "z.Sex"       "z.Age"       "z.Pcrc1age" 
+[12] "z.Cumgap"    "r.Sex"       "r.Adenoma"   "r.Age"       "r.Pcrc1age"  "d.Sex"       "d.Adenoma"   "d.Age"       "d.Pcrc1age" 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model2$marginals.fixed[[1]]))
-#Mean            0.24363 
-Stdev           0.0322826 
-Quantile  0.025 0.186318 
-Quantile  0.25  0.220794 
-Quantile  0.5   0.241463 
-Quantile  0.75  0.264067 
-Quantile  0.975 0.312928 
+#Mean            0.235094 
+Stdev           0.0356024 
+Quantile  0.025 0.172847 
+Quantile  0.25  0.209814 
+Quantile  0.5   0.232381 
+Quantile  0.75  0.257375 
+Quantile  0.975 0.312416 
 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model2$marginals.fixed[[2]]))
-#Mean            16.8544 
-Stdev           9.42856 
-Quantile  0.025 5.20128 
-Quantile  0.25  10.2544 
-Quantile  0.5   14.6588 
-Quantile  0.75  20.9511 
-Quantile  0.975 41.2422 
+#Mean            31.8778 
+Stdev           19.6662 
+Quantile  0.025 8.71964 
+Quantile  0.25  18.289 
+Quantile  0.5   27.0059 
+Quantile  0.75  39.8672 
+Quantile  0.975 83.4355 
 
 names(inla.model2$internal.marginals.hyperpar) 
 # [1] "alpha_intern for weibullsurv[3]" "alpha_intern for weibullsurv[4]" "Theta1 for d.YR"                
@@ -430,29 +409,29 @@ sdcor.Y <- matrix(unlist(mcsamples), nrow = 2^2)
 sdcor.Y.mean <- matrix(rowMeans(sdcor.Y),2,2)
 round(sdcor.Y.mean,3)
 #[,1]   [,2]
-[1,] 0.620 0.679
-[2,] 0.679 0.810
+[1,] 1.613 0.852
+[2,] 0.852 1.754
 
 # sd
 sdcor.Y.sd <- matrix(apply(sdcor.Y, 1, sd),2,2)
 round(sdcor.Y.sd,3)
 #[,1]  [,2]
-[1,] 0.244 0.188
-[2,] 0.188 0.291
+[1,] 0.796 0.13
+[2,] 0.130 0.63
 
 # 2.5% lower CI
 sdcor.Y.lowerci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.025)),2,2)
 round(sdcor.Y.lowerci,3)
 #[,1]   [,2]
-[1,] 0.301 0.220
-[2,] 0.220 0.376
+[1,] 0.527 0.551
+[2,] 0.551 0.817
 
 # 97.5% upper CI
 sdcor.Y.upperci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.975)),2,2)
 round(sdcor.Y.upperci,3)
 #[,1]  [,2]
-[1,] 1.237 0.930
-[2,] 0.930 1.491
+[1,] 3.597 0.964
+[2,] 0.964 3.254
 
 # for family-specific random effects Z
 mcsamples <- inla.iidkd.sample(10^4, inla.model2, "r.ZR", return.cov=FALSE) 
@@ -461,29 +440,34 @@ sdcor.Z <- matrix(unlist(mcsamples), nrow = 2^2)
 sdcor.Z.mean <- matrix(rowMeans(sdcor.Z),2,2)
 round(sdcor.Z.mean,3)
 #[,1]  [,2]
-[1,] 0.383 0.428
-[2,] 0.428 0.471
+[1,] 0.459 0.371
+[2,] 0.371 0.689
 
 # sd
 sdcor.Z.sd <- matrix(apply(sdcor.Z, 1, sd),2,2)
 round(sdcor.Z.sd,3)
 #[,1]  [,2]
-[1,] 0.075 0.205
-[2,] 0.205 0.114
+[1,] 0.091 0.211
+[2,] 0.211 0.210
 
 # 2.5% lower CI
 sdcor.Z.lowerci <- matrix(apply(sdcor.Z,1,function(x) quantile(x,0.025)),2,2)
 round(sdcor.Z.lowerci,3)
 #[,1]   [,2]
-[1,]  0.264 -0.023
-[2,] -0.023  0.287
+[1,]  0.311 -0.110
+[2,] -0.110  0.371
 
 # 97.5% upper CI
 sdcor.Z.upperci <- matrix(apply(sdcor.Z,1,function(x) quantile(x,0.975)),2,2)
 round(sdcor.Z.upperci,3)
 #[,1]  [,2]
-[1,] 0.555 0.765
-[2,] 0.765 0.729
+[1,] 0.665 0.721
+[2,] 0.721 1.178
+
+inla.model2$dic$dic
+#[1]  147.6263
+inla.model2$dic$family.dic
+#[1]  341.22311  146.39226 -287.36386  -52.62517
 
 ################################################################################  
 # ignore the familial correlations completely 
@@ -501,7 +485,7 @@ formula1 = Y ~ -1 + mu + intercept.l + l.Sex + l.Age + l.Pcrc1age + l.Cumgap + o
   intercept.z + z.Sex + z.Age + z.Pcrc1age + z.Cumgap + offset(z.Time) +
   r.Sex + r.Adenoma + r.Age + r.Pcrc1age +
   d.Sex + d.Adenoma + d.Age + d.Pcrc1age +
-  f(d.YR, model="iidkd", order=2, n=2*n2, hyper = list(theta1 = list(param = c(10, 1, 1, 0)))) +
+  f(d.YR, model="iidkd", order=2, n=2*n2, hyper = list(theta1 = list(param = c(5, 1, 1, 0)))) +
   f(d.YL, copy="d.YR") +
   f(r.YR, copy="d.YR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
   f(l.YL, copy="d.YR", hyper = list(beta = list(fixed = FALSE, param = c(0,1)))) +
@@ -510,45 +494,34 @@ formula1 = Y ~ -1 + mu + intercept.l + l.Sex + l.Age + l.Pcrc1age + l.Cumgap + o
 inla.model3 <- inla(formula1, family = c("binomial","zeroinflatednbinomial0","weibullsurv","weibullsurv"),
                     data = data.f, control.compute=list(dic=TRUE,cpo=TRUE,waic=TRUE),
                     control.family = list(list(),list(hyper = list(prob = list(initial = -10,fixed = TRUE))),list(variant=1),list(variant=1)),
-                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE)
+                    control.inla = list(int.strategy="eb", cmin = 0), safe = TRUE,control.fixed = list(prec.intercept = 0.1))
 
 ### Final Results
 summary(inla.model3)
-# Call:
-c("inla.core(formula = formula, family = family, contrasts = contrasts, ", " data = data, quantiles = quantiles, E = E, 
-   offset = offset, ", " scale = scale, weights = weights, Ntrials = Ntrials, strata = strata, ", " lp.scale = lp.scale, 
-   link.covariates = link.covariates, verbose = verbose, ", " lincomb = lincomb, selection = selection, control.compute = 
-   control.compute, ", " control.predictor = control.predictor, control.family = control.family, ", " control.inla = 
-   control.inla, control.fixed = control.fixed, ", " control.mode = control.mode, control.expert = control.expert, ", " 
-   control.hazard = control.hazard, control.lincomb = control.lincomb, ", " control.update = control.update, 
-   control.lp.scale = control.lp.scale, ", " control.pardiso = control.pardiso, only.hyperparam = only.hyperparam, ", " 
-   inla.call = inla.call, inla.arg = inla.arg, num.threads = num.threads, ", " blas.num.threads = blas.num.threads, keep = 
-   keep, working.directory = working.directory, ", " silent = silent, inla.mode = inla.mode, safe = FALSE, debug = debug, 
-   ", " .parent.frame = .parent.frame)") 
-Time used:
-  Pre = 3.91, Running = 4.95, Post = 0.0619, Total = 8.92 
+# Time used:
+Pre = 1.58, Running = 7.78, Post = 0.0673, Total = 9.43 
 Fixed effects:
-  mean    sd 0.025quant 0.5quant 0.975quant mode kld
-mu1          1.246 0.092      1.065    1.246      1.426   NA   0
-mu2         -2.953 0.542     -4.016   -2.953     -1.890   NA   0
-intercept.l  0.627 0.321     -0.002    0.627      1.257   NA   0
-l.Sex        0.254 0.378     -0.486    0.254      0.995   NA   0
-l.Age       -0.211 0.161     -0.527   -0.211      0.105   NA   0
-l.Pcrc1age  -0.332 0.381     -1.080   -0.332      0.415   NA   0
-l.Cumgap    -0.084 0.039     -0.161   -0.084     -0.008   NA   0
-intercept.z -0.506 0.574     -1.630   -0.506      0.619   NA   0
-z.Sex        0.982 0.557     -0.109    0.982      2.074   NA   0
-z.Age        0.396 0.257     -0.108    0.396      0.899   NA   0
-z.Pcrc1age  -0.686 0.601     -1.863   -0.686      0.492   NA   0
-z.Cumgap    -0.336 0.085     -0.503   -0.336     -0.169   NA   0
-r.Sex        0.244 0.156     -0.062    0.244      0.550   NA   0
-r.Adenoma    0.208 0.161     -0.109    0.208      0.524   NA   0
-r.Age        0.058 0.060     -0.060    0.058      0.176   NA   0
-r.Pcrc1age  -0.414 0.165     -0.739   -0.414     -0.090   NA   0
-d.Sex        2.928 0.660      1.635    2.928      4.220   NA   0
-d.Adenoma   -0.994 0.836     -2.633   -0.994      0.645   NA   0
-d.Age        1.157 0.261      0.645    1.157      1.669   NA   0
-d.Pcrc1age  -0.450 0.713     -1.847   -0.450      0.948   NA   0
+  mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+mu1          1.301 0.097      1.111    1.301      1.491  1.301   0
+mu2         -3.097 0.522     -4.120   -3.097     -2.074 -3.097   0
+intercept.l  1.348 0.365      0.633    1.348      2.064  1.348   0
+l.Sex       -0.200 0.432     -1.046   -0.200      0.647 -0.200   0
+l.Age       -0.261 0.188     -0.629   -0.261      0.108 -0.261   0
+l.Pcrc1age   0.040 0.442     -0.826    0.040      0.907  0.040   0
+l.Cumgap    -0.146 0.043     -0.231   -0.146     -0.061 -0.146   0
+intercept.z -1.375 0.526     -2.406   -1.375     -0.343 -1.375   0
+z.Sex        1.200 0.513      0.195    1.200      2.205  1.200   0
+z.Age        0.362 0.238     -0.105    0.362      0.828  0.362   0
+z.Pcrc1age  -0.658 0.553     -1.742   -0.658      0.426 -0.658   0
+z.Cumgap    -0.315 0.079     -0.470   -0.315     -0.160 -0.315   0
+r.Sex        0.375 0.162      0.057    0.375      0.693  0.375   0
+r.Adenoma   -0.004 0.161     -0.320   -0.004      0.312 -0.004   0
+r.Age        0.068 0.063     -0.054    0.068      0.191  0.068   0
+r.Pcrc1age  -0.484 0.176     -0.829   -0.484     -0.139 -0.484   0
+d.Sex        3.262 0.694      1.902    3.262      4.622  3.262   0
+d.Adenoma   -2.775 0.838     -4.416   -2.775     -1.133 -2.775   0
+d.Age        1.284 0.296      0.705    1.284      1.864  1.284   0
+d.Pcrc1age  -1.124 0.796     -2.684   -1.124      0.435 -1.124   0
 
 Random effects:
   Name	  Model
@@ -559,25 +532,25 @@ l.YL Copy
 z.YL Copy
 
 Model hyperparameters:
-  mean     sd 0.025quant 0.5quant 0.975quant mode
-size for nbinomial zero-inflated observations[2] 33.442 40.072      5.564   29.784    175.718   NA
-alpha parameter for weibullsurv[3]                1.136  0.028      1.068    1.131      1.188   NA
-alpha parameter for weibullsurv[4]                0.518  0.014      0.492    0.520      0.554   NA
-Theta1 for d.YR                                   0.872  0.138      0.548    0.882      1.086   NA
-Theta2 for d.YR                                   0.385  0.131      0.172    0.379      0.687   NA
-Theta3 for d.YR                                  -1.642  0.289     -2.383   -1.705     -1.097   NA
-Beta for r.YR                                     0.939  0.158      0.555    0.923      1.224   NA
-Beta for l.YL                                     1.411  0.214      1.049    1.402      1.893   NA
-Beta for z.YL                                     1.703  0.158      1.340    1.703      1.983   NA
+  mean      sd 0.025quant 0.5quant 0.975quant   mode
+size for nbinomial_0 zero-inflated observations[2] 35.779 158.908      0.541    8.132    239.738  1.199
+alpha parameter for weibullsurv[3]                  1.175   0.053      1.075    1.173      1.283  1.170
+alpha parameter for weibullsurv[4]                  0.709   0.037      0.642    0.707      0.787  0.702
+Theta1 for d.YR                                    -0.789   0.394     -1.532   -0.799      0.021 -0.848
+Theta2 for d.YR                                    -0.115   0.490     -1.107   -0.107      0.823 -0.068
+Theta3 for d.YR                                    -0.297   0.295     -0.899   -0.290      0.261 -0.258
+Beta for r.YR                                       0.290   0.092      0.117    0.288      0.477  0.277
+Beta for l.YL                                      -1.170   0.606     -2.354   -1.174      0.033 -1.188
+Beta for z.YL                                       0.995   0.441      0.133    0.993      1.870  0.984
 
-Deviance Information Criterion (DIC) ...............: 249.56
-Deviance Information Criterion (DIC, saturated) ....: -3686.13
-Effective number of parameters .....................: 112.39
+Deviance Information Criterion (DIC) ...............: 191.13
+Deviance Information Criterion (DIC, saturated) ....: NA
+Effective number of parameters .....................: 167.50
 
-Watanabe-Akaike information criterion (WAIC) ...: 290.97
-Effective number of parameters .................: 130.30
+Watanabe-Akaike information criterion (WAIC) ...: 277.57
+Effective number of parameters .................: 198.27
 
-Marginal log-Likelihood:  -245.59 
+Marginal log-Likelihood:  -240.69 
 CPO, PIT is computed 
 Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
@@ -585,25 +558,25 @@ Posterior summaries for the linear predictor and the fitted values are computed
 # scale parameter in Weibull baseline hazard function for recurrent event and a terminal event
 # b_R = exp(-intercept_R) and b_D = exp(-intercept_D)
 names(inla.model3$marginals.fixed)
-#[1] "mu1"         "mu2"         "intercept.l" "l.Sex"       "l.Polyps"    "l.Age"       "l.Pcrc1age"  "intercept.z" "z.Sex"       "z.Polyps"    "z.Age"      
-[12] "z.Pcrc1age"  "r.Sex"       "r.Polyps"    "r.Age"       "r.Pcrc1age"  "d.Sex"       "d.Polyps"    "d.Age"       "d.Pcrc1age" 
+# [1] "mu1"         "mu2"         "intercept.l" "l.Sex"       "l.Age"       "l.Pcrc1age"  "l.Cumgap"    "intercept.z" "z.Sex"       "z.Age"       "z.Pcrc1age" 
+[12] "z.Cumgap"    "r.Sex"       "r.Adenoma"   "r.Age"       "r.Pcrc1age"  "d.Sex"       "d.Adenoma"   "d.Age"       "d.Pcrc1age" 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model3$marginals.fixed[[1]]))
-#Mean            0.288992 
-Stdev           0.0264482 
-Quantile  0.025 0.240487 
-Quantile  0.25  0.270467 
-Quantile  0.5   0.287745 
-Quantile  0.75  0.306128 
-Quantile  0.975 0.344292 
+#Mean            0.273593 
+Stdev           0.0264476 
+Quantile  0.025 0.225284 
+Quantile  0.25  0.255042 
+Quantile  0.5   0.272279 
+Quantile  0.75  0.290681 
+Quantile  0.975 0.329078 
 
 inla.zmarginal(inla.tmarginal(function(x) exp(-x),inla.model3$marginals.fixed[[2]]))
-#Mean            22.1576 
-Stdev           12.7329 
-Quantile  0.025 6.622 
-Quantile  0.25  13.2735 
-Quantile  0.5   19.1401 
-Quantile  0.75  27.5942 
-Quantile  0.975 55.2179 
+#Mean            25.3141 
+Stdev           13.9331 
+Quantile  0.025 7.9617 
+Quantile  0.25  15.5428 
+Quantile  0.5   22.1042 
+Quantile  0.75  31.4302 
+Quantile  0.975 61.2693 
 
 names(inla.model3$internal.marginals.hyperpar) 
 #[1] "log size for nbinomial zero-inflated observations[2]" "alpha_intern for weibullsurv[3]"                     
@@ -614,13 +587,13 @@ names(inla.model3$internal.marginals.hyperpar)
 
 # for dispersion
 inla.zmarginal(inla.tmarginal(function(x) exp(x),inla.model3$internal.marginals.hyperpar[[1]]))
-#Mean            33.0552 
-Stdev           36.5973 
-Quantile  0.025 7.03644 
-Quantile  0.25  13.5705 
-Quantile  0.5   21.184 
-Quantile  0.75  37.5376 
-Quantile  0.975 131.338 
+#Mean            33.3984 
+Stdev           104.841 
+Quantile  0.025 0.163178 
+Quantile  0.25  2.50448 
+Quantile  0.5   7.62458 
+Quantile  0.75  24.2314 
+Quantile  0.975 235.127 
 
 # for standard deviation and correlation coefficients of random effects
 # for subject-specific random effects Y
@@ -630,27 +603,31 @@ sdcor.Y <- matrix(unlist(mcsamples), nrow = 2^2)
 sdcor.Y.mean <- matrix(rowMeans(sdcor.Y),2,2)
 round(sdcor.Y.mean,3)
 #[,1]   [,2]
-[1,] 0.668 0.716
-[2,] 0.716 0.732
+[1,] 2.581 0.306
+[2,] 0.306 1.287
 
 # sd
 sdcor.Y.sd <- matrix(apply(sdcor.Y, 1, sd),2,2)
 round(sdcor.Y.sd,3)
 #[,1]  [,2]
-[1,] 0.201 0.147
-[2,] 0.147 0.213
+[1,] 0.902 0.303
+[2,] 0.303 0.766
 
 # 2.5% lower CI
 sdcor.Y.lowerci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.025)),2,2)
 round(sdcor.Y.lowerci,3)
 #[,1]   [,2]
-[1,] 0.381 0.349
-[2,] 0.349 0.401
+[1,]  1.278 -0.315
+[2,] -0.315  0.411
 
 # 97.5% upper CI
 sdcor.Y.upperci <- matrix(apply(sdcor.Y,1,function(x) quantile(x,0.975)),2,2)
 round(sdcor.Y.upperci,3)
 #[,1]  [,2]
-[1,] 1.150 0.916
-[2,] 0.916 1.237
+[1,] 4.829 0.863
+[2,] 0.863 3.257
 
+inla.model3$dic$dic
+# [1]  191.1321
+inla.model3$dic$family.dic
+# [1]  354.26699  153.19835 -265.70198  -50.63127
